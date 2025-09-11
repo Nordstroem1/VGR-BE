@@ -1,0 +1,16 @@
+﻿using Domain.Enums;
+
+namespace Domain.Models
+{
+    public class Article
+    {
+        public Guid Id { get; set; }
+        public string MaterialType { get; set; } = string.Empty;
+        public int Amount { get; set; }
+        public bool IsOrdered { get; set; } = false;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        public Unit Unit { get; set; } = Unit.st;
+        public ArticleStatus Status = ArticleStatus.Fullt;
+    }
+}
