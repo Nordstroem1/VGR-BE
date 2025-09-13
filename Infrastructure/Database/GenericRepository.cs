@@ -1,13 +1,13 @@
-﻿using Domain.Models;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Application.Interfaces;
+using System.Linq.Expressions;
 
 namespace Infrastructure.Database
 {
     public class GenericRepository<T> : IGenericRepository<T> where T : class
     {
-        private readonly AppDbContext _context;
-        private readonly DbSet<T> _set;
+        protected readonly AppDbContext _context;
+        protected readonly DbSet<T> _set;
 
         public GenericRepository(AppDbContext context)
         {
@@ -15,114 +15,54 @@ namespace Infrastructure.Database
             _set = _context.Set<T>();
         }
 
-        public async Task<OperationResult<IEnumerable<T>>> GetAllAsync(CancellationToken cancellationToken = default)
+        public Task<List<T>> GetAllAsync()
         {
-            try
-            {
-                var items = await _set.AsNoTracking().ToListAsync(cancellationToken);
-                return OperationResult<IEnumerable<T>>.SuccessResult(items);
-            }
-            catch (Exception ex)
-            {
-                return OperationResult<IEnumerable<T>>.FailureResult($"Failed to retrieve {typeof(T).Name} items: {ex.Message}");
-            }
+            return _set.AsNoTracking().ToListAsync();
         }
 
-        public async Task<OperationResult<T>> GetByIdAsync(object id, CancellationToken cancellationToken = default)
+        public Task<T?> GetByIdAsync(object id)
         {
-            try
-            {
-                var entity = await _set.FindAsync(new object?[] { id }, cancellationToken);
-                if (entity is null)
-                {
-                    return OperationResult<T>.FailureResult($"{typeof(T).Name} with id '{id}' was not found.");
-                }
-                return OperationResult<T>.SuccessResult(entity);
-            }
-            catch (Exception ex)
-            {
-                return OperationResult<T>.FailureResult($"Failed to retrieve {typeof(T).Name} with id '{id}': {ex.Message}");
-            }
+            return _set.FindAsync([id]).AsTask();
         }
 
-        public async Task<OperationResult<T>> AddAsync(T entity, CancellationToken cancellationToken = default)
+        public Task<List<T>> FindAsync(Expression<Func<T, bool>> predicate)
         {
-            if (entity is null)
-            {
-                return OperationResult<T>.FailureResult("Entity cannot be null.");
-            }
-
-            try
-            {
-                await _set.AddAsync(entity, cancellationToken);
-                await _context.SaveChangesAsync(cancellationToken);
-                return OperationResult<T>.SuccessResult(entity);
-            }
-            catch (DbUpdateException dbEx)
-            {
-                return OperationResult<T>.FailureResult($"Database update error while adding {typeof(T).Name}: {dbEx.Message}");
-            }
-            catch (Exception ex)
-            {
-                return OperationResult<T>.FailureResult($"Unexpected error while adding {typeof(T).Name}: {ex.Message}");
-            }
+            return  _set.AsNoTracking().Where(predicate).ToListAsync();
         }
 
-        public async Task<OperationResult<T>> UpdateAsync(T entity, CancellationToken cancellationToken = default)
+        public async Task<T> AddAsync(T entity)
         {
-            if (entity is null)
-            {
-                return OperationResult<T>.FailureResult("Entity cannot be null.");
-            }
+            await _set.AddAsync(entity);
+            await _context.SaveChangesAsync();
 
-            try
-            {
-                var entry = _context.Entry(entity);
-                if (entry.State == EntityState.Detached)
-                {
-                    _set.Attach(entity);
-                }
-                entry.State = EntityState.Modified;
-
-                await _context.SaveChangesAsync(cancellationToken);
-                return OperationResult<T>.SuccessResult(entity);
-            }
-            catch (DbUpdateConcurrencyException ex)
-            {
-                return OperationResult<T>.FailureResult($"Concurrency error while updating {typeof(T).Name}: {ex.Message}");
-            }
-            catch (DbUpdateException dbEx)
-            {
-                return OperationResult<T>.FailureResult($"Database update error while updating {typeof(T).Name}: {dbEx.Message}");
-            }
-            catch (Exception ex)
-            {
-                return OperationResult<T>.FailureResult($"Unexpected error while updating {typeof(T).Name}: {ex.Message}");
-            }
+            return entity;
         }
 
-        public async Task<OperationResult<T>> DeleteAsync(object id, CancellationToken cancellationToken = default)
+        public async Task<T> UpdateAsync(T entity)
         {
-            try
-            {
-                var entity = await _set.FindAsync(new object?[] { id }, cancellationToken);
-                if (entity is null)
-                {
-                    return OperationResult<T>.FailureResult($"{typeof(T).Name} with id '{id}' was not found.");
-                }
+            var entry = _context.Entry(entity);
 
-                _set.Remove(entity);
-                await _context.SaveChangesAsync(cancellationToken);
-                return OperationResult<T>.SuccessResult(entity);
-            }
-            catch (DbUpdateException dbEx)
+            if (entry.State == EntityState.Detached)
             {
-                return OperationResult<T>.FailureResult($"Database update error while deleting {typeof(T).Name} with id '{id}': {dbEx.Message}");
+                _set.Attach(entity);
             }
-            catch (Exception ex)
-            {
-                return OperationResult<T>.FailureResult($"Unexpected error while deleting {typeof(T).Name} with id '{id}': {ex.Message}");
-            }
+
+            entry.State = EntityState.Modified;
+            await _context.SaveChangesAsync();
+
+            return entity;
+        }
+
+        public async Task<bool> DeleteAsync(object id)
+        {
+            var entity = await _set.FindAsync([id]);
+
+            if (entity is null) return false;
+
+            _set.Remove(entity);
+            await _context.SaveChangesAsync();
+
+            return true;
         }
     }
 }

@@ -4,7 +4,7 @@ namespace Domain.Models
 {
     public class Article
     {
-        public Guid Id { get; set; }
+        public string Id { get; set; } = string.Empty;
         public string MaterialType { get; set; } = string.Empty;
         public int Amount { get; set; }
         public bool IsOrdered { get; set; } = false;

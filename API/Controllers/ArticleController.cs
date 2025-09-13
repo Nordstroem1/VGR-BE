@@ -7,13 +7,9 @@ namespace API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class ArticleController : Controller
+    public class ArticleController(ArticleService articleService) : Controller
     {
-        private readonly ArticleService _articleService;
-        public ArticleController(ArticleService articleService)
-        {
-            _articleService = articleService;
-        }
+        private readonly ArticleService _articleService = articleService;
 
         [HttpPost("Create")]
         public async Task<IActionResult> Create(CreateArticleDto articleDto)
@@ -32,5 +28,24 @@ namespace API.Controllers
 
             return Ok(creationResult.Data);
         }
+
+        [HttpPut("{id:string}")]
+        public async Task<IActionResult> Update(string id, UpdateArticleDto articleDto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var updateResult = await _articleService.UpdateArticle(id ,articleDto);
+
+            if (updateResult.IsFailure || updateResult.Data is null)
+            {
+                return BadRequest(updateResult.ErrorMessage);
+            }
+
+            return Ok(updateResult.Data);
+        }
+
     }
 }

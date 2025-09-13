@@ -12,6 +12,7 @@ namespace Infrastructure
         {
             AddDatabase(services, configuration);
             AddGenericRepository(services);
+
             return services;
         }
 
