@@ -7,7 +7,7 @@ namespace Application.Dtos
     {
         [Required]
         [StringLength(200)]
-        public string MaterialType { get; set; }
+        public string MaterialType { get; set; } = string.Empty;
         [Range(1, int.MaxValue)]
         public int Amount { get; set; }
         public bool IsOrdered { get; set; } = false;

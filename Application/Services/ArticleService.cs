@@ -1,7 +1,6 @@
 ﻿using Application.Dtos;
-using Domain.Models;
 using Application.Interfaces;
-using Domain.Enums;
+using Domain.Models;
 
 namespace Application.Services
 {
@@ -19,6 +18,13 @@ namespace Application.Services
                         : "Amount must be greater than zero.");
                 }
 
+                var existingArticle = await articleRepository.FindAsync(a => a.MaterialType.Equals(articleDto.MaterialType.Trim(), StringComparison.CurrentCultureIgnoreCase));
+
+                if (existingArticle.Count is not 0)
+                {
+                    return OperationResult<Article>.FailureResult($"Article with MaterialType {articleDto.MaterialType} already exists.");
+                }
+
                 var article = new Article
                 {
                     Id = Guid.NewGuid().ToString(),
@@ -32,14 +38,14 @@ namespace Application.Services
                 };
 
 
-                var saved = await articleRepository.AddAsync(article);
+                var savedArticle = await articleRepository.AddAsync(article);
 
-                if (saved is null)
+                if (savedArticle is null)
                 {
                     return OperationResult<Article>.FailureResult($"Failed to add the Article: {article.MaterialType}.");
                 }
 
-                return OperationResult<Article>.SuccessResult(saved);
+                return OperationResult<Article>.SuccessResult(savedArticle);
             }
             catch
             {
@@ -47,7 +53,7 @@ namespace Application.Services
             }
         }
 
-        public async Task<OperationResult<Article>> UpdateArticle(string articleId ,UpdateArticleDto articleDto)
+        public async Task<OperationResult<Article>> UpdateArticle(string articleId, UpdateArticleDto articleDto)
         {
             try
             {
@@ -61,7 +67,7 @@ namespace Application.Services
                 }
 
                 var existingArticle = await articleRepository.GetByIdAsync(articleId);
-                
+
                 if (existingArticle is null)
                 {
                     return OperationResult<Article>.FailureResult($"Article with Id {articleId} not found.");
@@ -74,18 +80,89 @@ namespace Application.Services
                 existingArticle.Status = articleDto.Status;
                 existingArticle.UpdatedAt = DateTime.UtcNow;
 
-                var updatedOperation = await articleRepository.UpdateAsync(existingArticle);
+                var updatedArticle = await articleRepository.UpdateAsync(existingArticle);
 
-                if (updatedOperation is null)
+                if (updatedArticle is null)
                 {
                     return OperationResult<Article>.FailureResult($"Failed to update the Article with Id: {existingArticle.Id}.");
                 }
 
-                return OperationResult<Article>.SuccessResult(updatedOperation);
+                return OperationResult<Article>.SuccessResult(updatedArticle);
             }
             catch
             {
                 return OperationResult<Article>.FailureResult("An unexpected error updating Article.");
+            }
+        }
+
+        public async Task<OperationResult<string>> DeleteArticle(string articleId)
+        {
+            try
+            {
+                var existingArticle = await articleRepository.GetByIdAsync(articleId);
+
+                if (existingArticle is null)
+                {
+                    return OperationResult<string>.FailureResult($"Article with Id {articleId} not found.");
+                }
+
+                var isDeleted = await articleRepository.DeleteAsync(existingArticle.Id);
+
+                if (isDeleted)
+                {
+                    return OperationResult<string>.SuccessResult($"Article {existingArticle.MaterialType} was deleted successfully.");
+                }
+
+                return OperationResult<string>.FailureResult($"Failed to delete the Article with Id: {articleId}.");
+            }
+            catch
+            {
+                return OperationResult<string>.FailureResult("An unexpected error deleting Article.");
+            }
+        }
+
+        public async Task<OperationResult<Article>> GetById(string articleId)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(articleId))
+                {
+                    return OperationResult<Article>.FailureResult("Valid Article ID is required.");
+                }
+
+                var article = await articleRepository.GetByIdAsync(articleId);
+
+                if (article is null)
+                {
+                    return OperationResult<Article>.FailureResult($"Article not found.");
+                }
+
+                return OperationResult<Article>.SuccessResult(article);
+            }
+            catch
+            {
+                return OperationResult<Article>.FailureResult("An unexpected error retrieving Article by Id.");
+            }
+        }
+
+        public async Task<OperationResult<List<Article>>> GetAll()
+        {
+            try
+            {
+                var articleList = (await articleRepository.GetAllAsync())
+                                                          .OrderByDescending(a => a.Status)
+                                                          .ToList();
+
+                if(articleList is null || articleList.Count is 0)
+                {
+                    return OperationResult<List<Article>>.FailureResult("No articles found.");
+                }
+
+                return OperationResult<List<Article>>.SuccessResult(articleList);
+            }
+            catch
+            {
+                return OperationResult<List<Article>>.FailureResult("Something went wrong-");
             }
         }
     }
