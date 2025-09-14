@@ -28,7 +28,7 @@ namespace API.Controllers
             return Ok(creationResult.Data);
         }
 
-        [HttpPut("{id:string}")]
+        [HttpPut("{id}")] // removed invalid :string constraint
         public async Task<IActionResult> Update(string id, UpdateArticleDto articleDto)
         {
             if (!ModelState.IsValid)
@@ -46,7 +46,7 @@ namespace API.Controllers
             return Ok(updateResult.Data);
         }
 
-        [HttpDelete("{id:string}")]
+        [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(string id)
         {
             try
@@ -71,7 +71,7 @@ namespace API.Controllers
             }
         }
 
-        [HttpGet("GetById")]
+        [HttpGet("GetById/{id}")]
         public async Task<IActionResult> GetById(string id)
         {
             try
@@ -113,6 +113,31 @@ namespace API.Controllers
             catch
             {
                 return StatusCode(500, "An unexpected error occurred while retrieving articles.");
+            }
+        }
+
+        [HttpPost("OrderArticle/{id}")]
+        public async Task<IActionResult> OrderArticle(string id, int Amount)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(id))
+                {
+                    return BadRequest("Article ID is required.");
+                }
+
+                var orderResult = await _articleService.OrderArticle(id, Amount);
+                
+                if (orderResult.IsFailure || orderResult.Data is null)
+                {
+                    return BadRequest(orderResult.ErrorMessage);
+                }
+
+                return Ok(orderResult.Data);
+            }
+            catch
+            {
+                return StatusCode(500, "An unexpected error occurred while ordering the article.");
             }
         }
     }
