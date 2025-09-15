@@ -17,6 +17,18 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddApplicationLayer()
                 .AddInfrastructureLayer(builder.Configuration);
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("FrontendClient", policy =>
+    {
+        // Prefer putting the URL into configuration: "Frontend:BaseUrl": "https://your-frontend.example"
+        var frontendOrigin = "http://localhost:5173";
+
+        policy.WithOrigins(frontendOrigin)
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
 
 var app = builder.Build();
 
@@ -24,7 +36,6 @@ if (app.Environment.IsDevelopment())
 {
     builder.Configuration.AddUserSecrets<Program>();
     app.MapOpenApi();
-
     app.UseSwagger();
     app.UseSwaggerUI(o =>
     {
@@ -34,9 +45,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
 app.UseAuthorization();
-
+app.UseCors("FrontendClient");
 app.MapControllers();
 
 app.Run();

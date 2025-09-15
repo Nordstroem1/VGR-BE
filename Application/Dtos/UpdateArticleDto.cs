@@ -8,14 +8,12 @@ namespace Application.Dtos
         [Required]
         [StringLength(200)]
         public string MaterialType { get; set; } = string.Empty;
-        [Range(1, int.MaxValue)]
+        [Range(0, int.MaxValue)]
         public int Amount { get; set; }
         [Range(1, int.MaxValue)]
         public int FullAmount { get; set; }
         public bool IsOrdered { get; set; } = false;
         [Required]
         public Unit Unit { get; set; } 
-        [Required]
-        public ArticleStatus Status { get; set; } 
     }
 }

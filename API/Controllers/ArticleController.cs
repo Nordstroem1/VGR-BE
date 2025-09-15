@@ -6,44 +6,61 @@ namespace API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class ArticleController(ArticleService articleService) : Controller
+    public class ArticleController([FromBody] ArticleService articleService) : Controller
     {
         private readonly ArticleService _articleService = articleService;
 
         [HttpPost("Create")]
         public async Task<IActionResult> Create(CreateArticleDto articleDto)
         {
-            if (!ModelState.IsValid)
+            try
             {
-                return BadRequest(ModelState);
+
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+
+                var creationResult = await _articleService.CreateArticle(articleDto);
+
+                if (creationResult.IsFailure || creationResult.Data is null)
+                {
+                    return BadRequest(creationResult.ErrorMessage);
+                }
+
+                return Ok(creationResult.Data);
             }
-
-            var creationResult = await _articleService.CreateArticle(articleDto);
-
-            if (creationResult.IsFailure || creationResult.Data is null)
+            catch
             {
-                return BadRequest(creationResult.ErrorMessage);
-            }
+                return StatusCode(500, "An unexpected error occurred while retrieving the article.");
 
-            return Ok(creationResult.Data);
+            }
         }
 
-        [HttpPut("{id}")] // removed invalid :string constraint
+        [HttpPut("{id}")]
         public async Task<IActionResult> Update(string id, UpdateArticleDto articleDto)
         {
-            if (!ModelState.IsValid)
+            try
             {
-                return BadRequest(ModelState);
+
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+
+                var updateResult = await _articleService.UpdateArticle(id, articleDto);
+
+                if (updateResult.IsFailure || updateResult.Data is null)
+                {
+                    return BadRequest(updateResult.ErrorMessage);
+                }
+
+                return Ok(updateResult.Data);
             }
-
-            var updateResult = await _articleService.UpdateArticle(id, articleDto);
-
-            if (updateResult.IsFailure || updateResult.Data is null)
+            catch
             {
-                return BadRequest(updateResult.ErrorMessage);
+                return StatusCode(500, "An unexpected error occurred while retrieving the article.");
             }
-
-            return Ok(updateResult.Data);
         }
 
         [HttpDelete("{id}")]
@@ -71,7 +88,7 @@ namespace API.Controllers
             }
         }
 
-        [HttpGet("GetById/{id}")]
+        [HttpGet("GetById/{id}")] //behåller för nu.
         public async Task<IActionResult> GetById(string id)
         {
             try

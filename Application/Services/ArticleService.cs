@@ -24,6 +24,17 @@ namespace Application.Services
             return ArticleStatus.Kritisk;
         }
 
+        private static string NormalizeMaterialType(string? input)
+        {
+            if (string.IsNullOrWhiteSpace(input)) return string.Empty;
+
+            var trimmed = input.Trim();
+
+            if (trimmed.Length == 1) return trimmed.ToUpperInvariant();
+
+            return char.ToUpperInvariant(trimmed[0]) + trimmed[1..].ToLowerInvariant();
+        }
+
         public async Task<OperationResult<Article>> CreateArticle(CreateArticleDto articleDto)
         {
             try
@@ -38,8 +49,15 @@ namespace Application.Services
                         : "Invalid input.");
                 }
 
-                var materialType = articleDto.MaterialType.Trim().ToLower();
-                var existingArticle = await articleRepository.FindAsync(a => a.MaterialType.Equals(materialType));
+                if(articleDto.Amount > articleDto.FullAmount)
+                {
+                    logger.LogError("Attempted to create Article with MaterialType {MaterialType} where Amount {Amount} exceeds FullAmount {FullAmount}.", articleDto.MaterialType, articleDto.Amount, articleDto.FullAmount);
+                    return OperationResult<Article>.FailureResult("Amount cannot exceed FullAmount.");
+                }
+
+                var formattedMaterialType = NormalizeMaterialType(articleDto.MaterialType);
+
+                var existingArticle = await articleRepository.FindAsync(a => a.MaterialType.Equals(formattedMaterialType));
 
                 if (existingArticle.Count is not 0)
                 {
@@ -47,16 +65,11 @@ namespace Application.Services
                     return OperationResult<Article>.FailureResult($"Article with MaterialType {articleDto.MaterialType} already exists.");
                 }
 
-                if(articleDto.Amount > articleDto.FullAmount)
-                {
-                    logger.LogError("Attempted to create Article with MaterialType {MaterialType} where Amount {Amount} exceeds FullAmount {FullAmount}.", articleDto.MaterialType, articleDto.Amount, articleDto.FullAmount);
-                    return OperationResult<Article>.FailureResult("Amount cannot exceed FullAmount.");
-                }
 
                 var article = new Article
                 {
                     Id = Guid.NewGuid().ToString(),
-                    MaterialType = articleDto.MaterialType.Trim(),
+                    MaterialType = formattedMaterialType,
                     Amount = articleDto.Amount,
                     FullAmount = articleDto.FullAmount,
                     IsOrdered = articleDto.IsOrdered,
@@ -113,7 +126,7 @@ namespace Application.Services
                     return OperationResult<Article>.FailureResult("Amount cannot exceed FullAmount.");
                 }
 
-                existingArticle.MaterialType = articleDto.MaterialType.Trim();
+                existingArticle.MaterialType = NormalizeMaterialType(articleDto.MaterialType);
                 existingArticle.Amount = articleDto.Amount;
                 existingArticle.FullAmount = articleDto.FullAmount;
                 existingArticle.IsOrdered = articleDto.IsOrdered;
@@ -231,9 +244,9 @@ namespace Application.Services
 
                 var spaceLeft = foundArticle.FullAmount - foundArticle.Amount;
 
-                if(amount > spaceLeft)
+                if (amount > spaceLeft)
                 {
-                    logger.LogError("Attempted to order {OrderAmount} {Unit} for Article {ArticleId}, but only {SpaceLeft} {Unit} can be ordered to reach full capacity.", amount, foundArticle.Unit, foundArticle.Id, spaceLeft, foundArticle.Unit);
+                    logger.LogError("Attempted to order {OrderAmount} {Unit} for {foundArticle.MaterialType}, but only {SpaceLeft} {Unit} can be ordered to reach full capacity.", amount, foundArticle.Unit, foundArticle.MaterialType, spaceLeft, foundArticle.Unit);
                     return OperationResult<OrderReponse>.FailureResult($"Cannot order {amount} {foundArticle.Unit}. Only {spaceLeft} {foundArticle.Unit} can be ordered to reach full capacity.");
                 }
 

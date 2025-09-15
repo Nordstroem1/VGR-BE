@@ -14,6 +14,5 @@ namespace Application.Dtos
         public int FullAmount { get; set; }
         public bool IsOrdered { get; set; } = false;
         public Unit Unit { get; set; } = Unit.st;
-        public ArticleStatus Status = ArticleStatus.Fullt;
     }
 }
