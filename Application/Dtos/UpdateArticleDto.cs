@@ -10,6 +10,8 @@ namespace Application.Dtos
         public string MaterialType { get; set; } = string.Empty;
         [Range(1, int.MaxValue)]
         public int Amount { get; set; }
+        [Range(1, int.MaxValue)]
+        public int FullAmount { get; set; }
         public bool IsOrdered { get; set; } = false;
         [Required]
         public Unit Unit { get; set; } 

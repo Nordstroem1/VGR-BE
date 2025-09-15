@@ -12,6 +12,6 @@ namespace Domain.Models
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
         public Unit Unit { get; set; } = Unit.st;
-        public ArticleStatus Status = ArticleStatus.Fullt;
+        public ArticleStatus Status { get; set; } 
     }
 }

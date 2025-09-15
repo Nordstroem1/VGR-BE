@@ -28,12 +28,14 @@ namespace Application.Services
         {
             try
             {
-                if (articleDto is not { MaterialType.Length: > 0, Amount: > -1 })
+                if (articleDto is not { MaterialType.Length: > 0, Amount: > -1, FullAmount: > -1 })
                 {
                     return OperationResult<Article>.FailureResult(
                         articleDto is null ? "Input DTO cannot be null."
                         : string.IsNullOrWhiteSpace(articleDto.MaterialType) ? "MaterialType is required."
-                        : "Amount must be greater than zero.");
+                        : articleDto.Amount < 0 ? "Amount must be zero or greater."
+                        : articleDto.FullAmount < 0 ? "FullAmount must be zero or greater."
+                        : "Invalid input.");
                 }
 
                 var materialType = articleDto.MaterialType.Trim().ToLower();
@@ -48,7 +50,7 @@ namespace Application.Services
                 if(articleDto.Amount > articleDto.FullAmount)
                 {
                     logger.LogError("Attempted to create Article with MaterialType {MaterialType} where Amount {Amount} exceeds FullAmount {FullAmount}.", articleDto.MaterialType, articleDto.Amount, articleDto.FullAmount);
-                    return OperationResult<Article>.FailureResult($"Amount cannot exceed FullAmount.");
+                    return OperationResult<Article>.FailureResult("Amount cannot exceed FullAmount.");
                 }
 
                 var article = new Article
@@ -60,10 +62,10 @@ namespace Application.Services
                     IsOrdered = articleDto.IsOrdered,
                     Unit = articleDto.Unit,
                     CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
+                    UpdatedAt = DateTime.UtcNow,
+                    Status = CalculateStatus(articleDto.Amount, articleDto.FullAmount)
                 };
 
-                article.Status = CalculateStatus(article.Amount, article.FullAmount);
 
                 var savedArticle = await articleRepository.AddAsync(article);
 
@@ -86,12 +88,14 @@ namespace Application.Services
         {
             try
             {
-                if (articleDto is not { MaterialType.Length: > 0, Amount: > -1 })
+                if (articleDto is not { MaterialType.Length: > 0, Amount: > -1, FullAmount: > -1 })
                 {
                     return OperationResult<Article>.FailureResult(
                         articleDto is null ? "Input DTO cannot be null."
                         : string.IsNullOrWhiteSpace(articleId) ? "Valid Id is required."
                         : string.IsNullOrWhiteSpace(articleDto.MaterialType) ? "MaterialType is required."
+                        : articleDto.Amount < 0 ? "Amount must be zero or greater."
+                        : articleDto.FullAmount < 0 ? "FullAmount must be zero or greater."
                         : "Amount can not be negative.");
                 }
 
@@ -103,8 +107,15 @@ namespace Application.Services
                     return OperationResult<Article>.FailureResult($"Article with Id {articleId} not found.");
                 }
 
+                if(articleDto.Amount > existingArticle.FullAmount)
+                {
+                    logger.LogError("Attempted to update Article with Id {ArticleId} where Amount {Amount} exceeds FullAmount {FullAmount}.", articleId, articleDto.Amount, existingArticle.FullAmount);
+                    return OperationResult<Article>.FailureResult("Amount cannot exceed FullAmount.");
+                }
+
                 existingArticle.MaterialType = articleDto.MaterialType.Trim();
                 existingArticle.Amount = articleDto.Amount;
+                existingArticle.FullAmount = articleDto.FullAmount;
                 existingArticle.IsOrdered = articleDto.IsOrdered;
                 existingArticle.Unit = articleDto.Unit;
                 existingArticle.Status = CalculateStatus(existingArticle.Amount, existingArticle.FullAmount);
@@ -147,7 +158,7 @@ namespace Application.Services
                     return OperationResult<string>.SuccessResult($"Article {existingArticle.MaterialType} was deleted successfully.");
                 }
 
-                return OperationResult<string>.FailureResult($"Failed to delete the Article with Id: {articleId}.");
+                return OperationResult<string>.FailureResult($"Failed to delete Article {existingArticle.MaterialType}.");
             }
             catch (Exception ex)
             {
