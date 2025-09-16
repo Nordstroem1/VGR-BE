@@ -344,7 +344,7 @@ namespace Test.ArticleTests
             Assert.False(result.IsFailure);
             Assert.NotNull(result.Data);
             Assert.Equal("1", result.Data.Id);
-            Assert.Equal("Munskydd Updated", result.Data.MaterialType);
+            Assert.Equal("Munskydd updated", result.Data.MaterialType);
             Assert.Equal(5, result.Data.Amount);
             Assert.Equal(15, result.Data.FullAmount);
             Assert.True(result.Data.IsOrdered);
